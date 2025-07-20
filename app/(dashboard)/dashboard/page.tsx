@@ -1,17 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FolderOpen, Calendar, TrendingUp, RefreshCw, Plus, FolderPlus } from 'lucide-react'
+import { FolderOpen, TrendingUp, RefreshCw, Plus, FolderPlus, Ticket, AlertTriangle } from 'lucide-react'
 import { projectService } from '@/app/api/projects/project-service'
+import { TicketService } from '@/app/api/tickets/ticket-service'
 import type { Project } from '@/types/project'
+import type { DashboardStats, Ticket as TicketType } from '@/types/ticket'
+import { formatRemainingTime, getSlaStatusColor } from '@/lib/sla-utils'
 
 export default function DashboardPage() {
-  const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
+  const [tickets, setTickets] = useState<TicketType[]>([])
+  const [ticketStats, setTicketStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState({
     totalProjects: 0,
@@ -19,31 +23,41 @@ export default function DashboardPage() {
     highPriorityProjects: 0,
   })
 
-  // โหลดข้อมูลโครงการ
+  // โหลดข้อมูลโครงการและ tickets
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true)
-        const data = await projectService.getAll()
-        setProjects(data)
+        const [projectData, ticketData, ticketStatsData] = await Promise.all([
+          projectService.getAll(),
+          TicketService.getAllTickets(),
+          TicketService.getDashboardStats()
+        ])
         
-        // คำนวณสถิติ
+        setProjects(projectData)
+        setTickets(ticketData)
+        setTicketStats(ticketStatsData)
+        
+        // คำนวณสถิติโครงการ
         const currentDate = new Date()
         const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, currentDate.getDate())
         
-        const recentCount = data.filter(project => 
+        const recentCount = projectData.filter(project => 
           new Date(project.createdAt || project.signDate) >= lastMonth
         ).length
 
-        const highPriorityCount = data.filter(project => 
+        const highPriorityCount = projectData.filter(project => 
           project.slaLevel.high <= 4 // น้อยกว่าหรือเท่ากับ 4 ชั่วโมง
         ).length
 
         setStats({
-          totalProjects: data.length,
+          totalProjects: projectData.length,
           recentProjects: recentCount,
           highPriorityProjects: highPriorityCount,
         })
+        
+        // Log for debugging
+        console.log('Loaded data:', { projects: projectData.length, tickets: ticketData.length })
       } catch (err) {
         console.error('Failed to load dashboard data:', err)
       } finally {
@@ -54,50 +68,88 @@ export default function DashboardPage() {
     loadData()
   }, [])
 
-  const formatDate = (dateString: string) => {
-    // ป้องกัน hydration mismatch โดยใช้ client-side rendering สำหรับ date
-    if (typeof window === 'undefined') {
-      // Server-side: return simple format
-      return new Date(dateString).toISOString().split('T')[0]
-    }
-    // Client-side: return localized format
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+  // รีเฟรชข้อมูล
+  const handleRefresh = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      window.location.reload()
+    }, 500)
   }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('th-TH')
+  }
+
+  // Get recent tickets (last 5)
+  const recentTickets = tickets
+    .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+    .slice(0, 5)
+
+  // Get urgent tickets (high priority and critical)
+  const urgentTickets = tickets.filter(ticket => 
+    (ticket.priority === 'High' || ticket.priority === 'Critical') && 
+    (ticket.status === 'Open' || ticket.status === 'In Progress')
+  ).slice(0, 5)
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 flex items-center justify-center h-64">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="w-6 h-6 animate-spin" />
-          <span>กำลังโหลดข้อมูล...</span>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-between mb-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-300 rounded w-48 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-64"></div>
+          </div>
+          <div className="animate-pulse">
+            <div className="h-10 bg-gray-300 rounded w-24"></div>
+          </div>
+        </div>
+        
+        {/* Stats Grid Loading */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-32 bg-gray-300 rounded"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Loading */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="h-80 bg-gray-300 rounded"></div>
+            </div>
+          ))}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* หัวเรื่อง */}
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            ภาพรวมของระบบจัดการโครงการ Support Ticket
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">แดชบอร์ด</h1>
+          <p className="text-gray-600 mt-2">ภาพรวมระบบจัดการ Projects และ Support Tickets</p>
         </div>
-        <Button onClick={() => router.push('/projects/create')}>
-          <Plus className="w-4 h-4 mr-2" />
-          สร้างโครงการใหม่
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            รีเฟรช
+          </Button>
+        </div>
       </div>
 
-      {/* สถิติ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Project Stats */}
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">โครงการทั้งหมด</CardTitle>
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
@@ -105,176 +157,182 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProjects}</div>
             <p className="text-xs text-muted-foreground">
-              โครงการที่ลงทะเบียนในระบบ
+              +{stats.recentProjects} ในเดือนที่ผ่านมา
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">โครงการใหม่ (30 วัน)</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.recentProjects}</div>
-            <p className="text-xs text-muted-foreground">
-              โครงการที่สร้างใน 30 วันที่ผ่านมา
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Priority SLA</CardTitle>
+            <CardTitle className="text-sm font-medium">SLA สูง</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.highPriorityProjects}</div>
             <p className="text-xs text-muted-foreground">
-              โครงการที่มี SLA High ≤ 4 ชั่วโมง
+              โครงการที่มี SLA เร่งด่วน
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Ticket Stats */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tickets ทั้งหมด</CardTitle>
+            <Ticket className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{ticketStats?.totalTickets || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              เปิด: {ticketStats?.openTickets || 0} | ดำเนินการ: {ticketStats?.inProgressTickets || 0}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">เกิน SLA</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{ticketStats?.overdueSlaTickets || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              วิกฤต: {ticketStats?.criticalTickets || 0}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* โครงการล่าสุด */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>โครงการล่าสุด</CardTitle>
-              <CardDescription>
-                โครงการที่ได้ลงทะเบียนเมื่อเร็ว ๆ นี้
-              </CardDescription>
-            </div>
-            <Button variant="outline" onClick={() => router.push('/projects')}>
-              ดูทั้งหมด
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {projects.length === 0 ? (
-            <div className="text-center py-8">
-              <FolderPlus className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <div className="text-lg font-medium mb-2">ยังไม่มีโครงการ</div>
-              <div className="text-muted-foreground mb-4">
-                เริ่มต้นด้วยการสร้างโครงการแรกของคุณ
-              </div>
-              <Button onClick={() => router.push('/projects/create')}>
-                <Plus className="w-4 h-4 mr-2" />
-                สร้างโครงการแรก
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {projects.slice(0, 5).map((project) => (
-                <div 
-                  key={project.id} 
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() => router.push(`/projects/${project.id}`)}
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-medium">{project.projectName}</h3>
-                      <Badge variant="outline" className="text-xs">
-                        {project.projectCode}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      ผู้จัดการ: {project.projectManager.name} • 
-                      วันที่เซ็น: {formatDate(project.signDate)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="destructive" className="text-xs">
-                      H:{project.slaLevel.high}h
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      M:{project.slaLevel.medium}h
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      L:{project.slaLevel.low}h
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-              {projects.length > 5 && (
-                <div className="text-center pt-4">
-                  <Button variant="outline" onClick={() => router.push('/projects')}>
-                    ดูโครงการทั้งหมด ({projects.length} โครงการ)
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* การดำเนินการอื่น ๆ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Recent Activity and Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Recent Tickets */}
         <Card>
           <CardHeader>
-            <CardTitle>การจัดการโครงการ</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Tickets ล่าสุด</CardTitle>
+              <Link href="/tickets">
+                <Button variant="outline" size="sm">ดูทั้งหมด</Button>
+              </Link>
+            </div>
             <CardDescription>
-              เครื่องมือสำหรับจัดการโครงการ
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start"
-              onClick={() => router.push('/projects')}
-            >
-              <FolderOpen className="w-4 h-4 mr-2" />
-              ดูรายการโครงการทั้งหมด
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start"
-              onClick={() => router.push('/projects/create')}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              สร้างโครงการใหม่
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>สถิติ SLA</CardTitle>
-            <CardDescription>
-              การกระจายของระดับ SLA
+              Tickets ที่สร้างล่าสุด 5 รายการ
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {projects.length === 0 ? (
-              <div className="text-center text-muted-foreground py-4">
-                ไม่มีข้อมูล
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">High Priority (≤ 4h)</span>
-                  <Badge variant="destructive">
-                    {projects.filter(p => p.slaLevel.high <= 4).length} โครงการ
-                  </Badge>
+            <div className="space-y-4">
+              {recentTickets.map(ticket => (
+                <div key={ticket.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <div className="flex-1">
+                    <Link href={`/tickets/${ticket.id}`} className="font-medium text-blue-600 hover:underline">
+                      {ticket.ticketNumber}
+                    </Link>
+                    <p className="text-sm text-gray-600 truncate">{ticket.subject}</p>
+                    <p className="text-xs text-gray-500">{ticket.reporterName}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={ticket.priority === 'Critical' ? 'destructive' : 'outline'}>
+                      {ticket.priority}
+                    </Badge>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {ticket.createdAt && formatDate(ticket.createdAt)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Medium Priority (5-12h)</span>
-                  <Badge variant="secondary">
-                    {projects.filter(p => p.slaLevel.medium >= 5 && p.slaLevel.medium <= 12).length} โครงการ
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Low Priority (&gt;12h)</span>
-                  <Badge variant="outline">
-                    {projects.filter(p => p.slaLevel.low > 12).length} โครงการ
-                  </Badge>
-                </div>
-              </div>
-            )}
+              ))}
+              
+              {recentTickets.length === 0 && (
+                <p className="text-gray-500 text-center py-8">ยังไม่มี Tickets</p>
+              )}
+            </div>
           </CardContent>
         </Card>
+
+        {/* Urgent Tickets */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Tickets เร่งด่วน</CardTitle>
+              <Link href="/tickets?priority=High,Critical">
+                <Button variant="outline" size="sm">ดูทั้งหมด</Button>
+              </Link>
+            </div>
+            <CardDescription>
+              Tickets ที่มีความเร่งด่วนสูงและวิกฤต
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {urgentTickets.map(ticket => (
+                <div key={ticket.id} className="flex items-center justify-between p-3 bg-red-50 rounded border-l-4 border-red-500">
+                  <div className="flex-1">
+                    <Link href={`/tickets/${ticket.id}`} className="font-medium text-blue-600 hover:underline">
+                      {ticket.ticketNumber}
+                    </Link>
+                    <p className="text-sm text-gray-600 truncate">{ticket.subject}</p>
+                    {ticket.slaDeadline && ticket.status !== 'Closed' && (
+                      <Badge className={`text-xs ${getSlaStatusColor(new Date(ticket.slaDeadline))}`}>
+                        {formatRemainingTime(new Date(ticket.slaDeadline))}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="destructive">
+                      {ticket.priority}
+                    </Badge>
+                    <p className="text-xs text-gray-500 mt-1">{ticket.status}</p>
+                  </div>
+                </div>
+              ))}
+              
+              {urgentTickets.length === 0 && (
+                <p className="text-gray-500 text-center py-8">ไม่มี Tickets เร่งด่วน</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/tickets/create">
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-dashed border-2 border-gray-300 hover:border-blue-400">
+            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+              <Plus className="w-8 h-8 text-blue-600 mb-2" />
+              <h3 className="font-medium text-gray-900">สร้าง Ticket ใหม่</h3>
+              <p className="text-sm text-gray-600">แจ้งปัญหาหรือขอความช่วยเหลือ</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/projects/create">
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-dashed border-2 border-gray-300 hover:border-green-400">
+            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+              <FolderPlus className="w-8 h-8 text-green-600 mb-2" />
+              <h3 className="font-medium text-gray-900">สร้างโครงการใหม่</h3>
+              <p className="text-sm text-gray-600">เพิ่มโครงการและกำหนด SLA</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/tickets">
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-dashed border-2 border-gray-300 hover:border-purple-400">
+            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+              <Ticket className="w-8 h-8 text-purple-600 mb-2" />
+              <h3 className="font-medium text-gray-900">จัดการ Tickets</h3>
+              <p className="text-sm text-gray-600">ดูและจัดการ Tickets ทั้งหมด</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/projects">
+          <Card className="hover:shadow-lg transition-all cursor-pointer border-dashed border-2 border-gray-300 hover:border-orange-400">
+            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+              <FolderOpen className="w-8 h-8 text-orange-600 mb-2" />
+              <h3 className="font-medium text-gray-900">จัดการโครงการ</h3>
+              <p className="text-sm text-gray-600">ดูและแก้ไขโครงการ</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   )

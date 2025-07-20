@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Edit, Eye, Trash2, Calendar, Phone, Mail, User } from 'lucide-react'
 import type { Project } from '@/types/project'
-import { formatDate } from '@/lib/date-utils'
 
 interface ProjectCardProps {
   project: Project
@@ -15,6 +14,26 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onView, onEdit, onDelete }: ProjectCardProps) {
+  // Local formatDate function to avoid module resolution issues
+  const formatDate = (date: string | Date | null | undefined): string => {
+    if (!date) return '';
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      if (isNaN(dateObj.getTime())) {
+        return '';
+      }
+      
+      return dateObj.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return '';
+    }
+  };
 
   return (
     <Card className="hover:shadow-lg transition-shadow">

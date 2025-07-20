@@ -1,6 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎫 Support Ticket System
 
-## Getting Started
+ระบบจัดการ Support Ticket แบบครบครัน พัฒนาด้วย Next.js 15, TypeScript, และ TailwindCSS
+
+## 🚀 Features
+
+### 🎫 Ticket Management
+- **Create Tickets**: Auto-generated ticket numbers (RHD-YYYYMMDD-XXXX format)
+- **Status Tracking**: Open → In Progress → Resolved → Closed
+- **Priority Levels**: Low, Medium, High, Critical
+- **Categories**: Hardware, Software, Network, Security, Database, Other
+- **File Attachments**: Support for images, documents, PDFs with drag-and-drop
+- **Reporter Information**: Contact details for follow-up
+- **Project Association**: Link tickets to specific projects
+
+### 📊 Dashboard & Analytics
+- Real-time ticket statistics
+- SLA monitoring and alerts
+- Priority distribution charts
+- Status overview widgets
+- Recent activity tracking
+
+### 💬 Communication System
+- **Comments**: Internal and external comments
+- **File Sharing**: Attach files to comments
+- **Change Logs**: Automatic tracking of all changes
+- **Notifications**: Email and in-app notifications (placeholder)
+
+### ⏰ SLA Management
+- Configurable SLA deadlines by priority
+- Visual SLA status indicators
+- Overdue ticket alerts
+- Response time tracking
+
+### 📎 File Management
+- **Multiple File Upload**: Support for multiple files per ticket
+- **File Types**: Images (JPEG, PNG, GIF, WebP), Documents (PDF, DOC, DOCX, XLS, XLSX), Text files
+- **File Size Limit**: 10MB per file
+- **Preview & Download**: Direct file access with preview for images
+- **Visual Indicators**: File attachment icons in ticket lists
+
+### 🔄 Workflow Management
+- Ticket assignment to suppliers/technicians
+- Status change tracking
+- Automated change logging
+- Feedback collection system
+
+## 🛠 Technology Stack
+
+- **Frontend**: Next.js 15.3.5, React 19, TypeScript 5
+- **Styling**: TailwindCSS 4, Radix UI Components
+- **Icons**: Lucide React
+- **Storage**: LocalStorage (Demo) - Ready for Supabase integration
+- **State Management**: React Hooks
+
+## 🚦 Getting Started
 
 First, run the development server:
 
@@ -10,27 +63,78 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+├── (auth)/                 # Authentication pages
+├── (dashboard)/           # Main application
+│   ├── dashboard/         # Dashboard overview
+│   ├── projects/         # Project management
+│   └── tickets/          # Ticket management
+├── api/
+│   ├── projects/         # Project services
+│   └── tickets/          # Ticket services
+components/               # Reusable UI components
+lib/                     # Utility functions
+├── sla-utils.ts         # SLA calculations
+├── ticket-utils.ts      # Ticket number generation
+└── date-utils.ts        # Date formatting
+types/                   # TypeScript type definitions
+├── ticket.ts           # Ticket-related types
+└── project.ts          # Project-related types
+```
 
-## Learn More
+## 🎯 Usage
 
-To learn more about Next.js, take a look at the following resources:
+### Creating a New Ticket
+1. Navigate to `/tickets/create`
+2. Fill in reporter information
+3. Select category and priority
+4. Attach files if needed
+5. Submit to generate auto ticket number
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Managing Tickets
+- View all tickets in `/tickets`
+- Filter by status, priority, category
+- Click on ticket to view details
+- Add comments and track changes
+- Update status and assign to team members
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Dashboard Overview
+- Real-time statistics
+- SLA monitoring
+- Recent activity
+- Priority distribution
 
-## Deploy on Vercel
+## 🔧 Configuration
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### SLA Settings
+Edit `lib/sla-utils.ts` to configure:
+- Priority-based deadlines
+- Business hours
+- Holiday schedules
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### File Upload Settings
+Edit `app/(dashboard)/tickets/components/CreateTicketForm.tsx`:
+- Maximum file size (currently 10MB)
+- Allowed file types
+- Upload validation rules
+
+## 🚀 Deployment
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new).
+
+For production deployment:
+1. Replace LocalStorage with proper database (Supabase recommended)
+2. Configure file upload to cloud storage (AWS S3, Cloudinary)
+3. Set up email notifications
+4. Configure authentication system
+
+## 📝 License
+
+This project is licensed under the MIT License.

@@ -17,16 +17,23 @@ export default function DashboardLayout({
               <nav className="hidden md:flex space-x-6">
                 <Link 
                   href="/dashboard" 
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
                 >
                   Dashboard
                 </Link>
                 <br></br>
                 <Link 
                   href="/projects" 
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                  className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
                 >
-                  Project
+                  Projects
+                </Link>
+                <br></br>
+                <Link 
+                  href="/tickets" 
+                  className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                >
+                  Tickets
                 </Link>
               </nav>
             </div>

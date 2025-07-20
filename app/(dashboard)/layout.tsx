@@ -26,7 +26,7 @@ export default function DashboardLayout({
                   href="/projects" 
                   className="text-gray-600 hover:text-gray-900 transition-colors"
                 >
-                  โครงการ
+                  Project
                 </Link>
               </nav>
             </div>

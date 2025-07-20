@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { FolderOpen, Calendar, TrendingUp, RefreshCw, Plus, FolderPlus } from 'lucide-react'
-import { projectService } from '@/lib/project-service'
+import { projectService } from '@/app/api/projects/project-service'
 import type { Project } from '@/types/project'
 
 export default function DashboardPage() {
@@ -55,6 +55,12 @@ export default function DashboardPage() {
   }, [])
 
   const formatDate = (dateString: string) => {
+    // ป้องกัน hydration mismatch โดยใช้ client-side rendering สำหรับ date
+    if (typeof window === 'undefined') {
+      // Server-side: return simple format
+      return new Date(dateString).toISOString().split('T')[0]
+    }
+    // Client-side: return localized format
     return new Date(dateString).toLocaleDateString('th-TH', {
       year: 'numeric',
       month: 'short',

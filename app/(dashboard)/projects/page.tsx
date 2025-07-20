@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { ProjectCard } from '@/components/ProjectCard'
 import { ProjectDetailModal } from '@/components/ProjectDetailModal'
 import { Plus, Search, RefreshCw } from 'lucide-react'
-import { projectService } from '@/lib/project-service'
+import { projectService } from '@/app/api/projects/project-service'
 import type { Project } from '@/types/project'
 
 export default function ProjectsPage() {

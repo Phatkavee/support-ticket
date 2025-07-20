@@ -143,6 +143,7 @@ export function ResetPasswordForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
+                suppressHydrationWarning
               />
             </div>
             
@@ -157,6 +158,7 @@ export function ResetPasswordForm() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={loading}
+                suppressHydrationWarning
               />
             </div>
             

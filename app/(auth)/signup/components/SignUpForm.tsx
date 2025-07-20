@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signup } from "@/lib/auth-actions";
+import { signup } from "@/app/api/auth/auth-actions";
 
 export function SignUpForm() {
   return (
@@ -31,6 +31,7 @@ export function SignUpForm() {
                   id="first-name"
                   placeholder="Max"
                   required
+                  suppressHydrationWarning
                 />
               </div>
               <div className="grid gap-2">
@@ -40,6 +41,7 @@ export function SignUpForm() {
                   id="last-name"
                   placeholder="Robinson"
                   required
+                  suppressHydrationWarning
                 />
               </div>
             </div>
@@ -57,6 +59,7 @@ export function SignUpForm() {
                 autoCapitalize="off"
                 data-form-type="other"
                 key="email-input"
+                suppressHydrationWarning
               />
             </div>
             <div className="grid gap-2">
@@ -69,6 +72,7 @@ export function SignUpForm() {
                 autoComplete="new-password"
                 data-form-type="other"
                 key="password-input"
+                suppressHydrationWarning
                 />
             </div>
             <Button formAction={signup} type="submit" className="w-full">

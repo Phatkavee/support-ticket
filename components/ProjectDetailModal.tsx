@@ -16,6 +16,12 @@ export function ProjectDetailModal({ project, isOpen, onClose }: ProjectDetailMo
   if (!project) return null
 
   const formatDate = (dateString: string) => {
+    // ป้องกัน hydration mismatch โดยใช้ client-side rendering สำหรับ date
+    if (typeof window === 'undefined') {
+      // Server-side: return simple format
+      return new Date(dateString).toISOString().split('T')[0]
+    }
+    // Client-side: return localized format
     return new Date(dateString).toLocaleDateString('th-TH', {
       year: 'numeric',
       month: 'long',

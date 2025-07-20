@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { resetPassword } from "@/lib/auth-actions"
+import { resetPassword } from "@/app/api/auth/auth-actions"
 
 export function ForgotPasswordForm({ message }: { message?: string }) {
   return (
@@ -41,6 +41,7 @@ export function ForgotPasswordForm({ message }: { message?: string }) {
                 spellCheck="false"
                 autoCorrect="off"
                 autoCapitalize="off"
+                suppressHydrationWarning
               />
             </div>
             <Button type="submit" className="w-full">

@@ -1,8 +1,8 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { ProjectForm } from '@/components/ProjectForm'
-import { projectService } from '@/lib/project-service'
+import { ProjectForm } from '../../components/ProjectForm'
+import { projectService } from '@/app/api/projects/project-service'
 import type { Project, ProjectFormData } from '@/types/project'
 import { useState, useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'

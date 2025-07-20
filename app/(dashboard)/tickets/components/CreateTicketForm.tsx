@@ -123,7 +123,7 @@ export default function CreateTicketForm() {
       
       // Validate file types (images, documents, etc.)
       const allowedTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
         'application/pdf', 'application/msword', 
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
@@ -325,10 +325,10 @@ export default function CreateTicketForm() {
                     multiple
                     onChange={handleFileChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                    accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    รองรับไฟล์: รูปภาพ, PDF, Word, Excel, Text (ไฟล์ละไม่เกิน 10MB)
+                    รองรับไฟล์: รูปภาพ (PNG, JPG, GIF, WebP), PDF, Word, Excel, Text (ไฟล์ละไม่เกิน 10MB)
                   </p>
                 </div>
                 

@@ -1,3 +1,90 @@
+-- Set timezone to Asia/Bangkok permanently for this database
+ALTER DATABASE postgres SET timezone TO 'Asia/Bangkok';
+-- Set timezone for current session
+SET timezone = 'Asia/Bangkok';
+
+-- Create User Profiles table
+create table
+  public.profiles (
+    id uuid not null references auth.users on delete cascade,
+    full_name text,
+    email text unique,
+    avatar_url text,
+    primary key (id)
+  );
+
+alter table profiles enable row level security;
+
+create policy "Public profiles are viewable by everyone." on profiles for
+select
+  using (true);
+
+create policy "Users can insert their own profile." on profiles for insert
+with
+  check (auth.uid () = id);
+
+create policy "Users can update own profile." on profiles
+for update
+  using (auth.uid () = id);
+
+create function public.handle_new_user () returns trigger as $$
+begin
+  insert into public.profiles (id, full_name, avatar_url, email)
+  values (
+    new.id, 
+    new.raw_user_meta_data->>'full_name', 
+    new.raw_user_meta_data->>'avatar_url',
+    new.raw_user_meta_data->>'email'
+    );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+after insert on auth.users for each row
+execute procedure public.handle_new_user ();
+
+
+
+
+-- Create projects table
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_code VARCHAR(50) NOT NULL UNIQUE,
+  project_name VARCHAR(255) NOT NULL,
+  contact_number VARCHAR(20) NOT NULL,
+  sign_date DATE NOT NULL,
+  suppliers JSONB NOT NULL DEFAULT '[]',
+  sla_level JSONB NOT NULL DEFAULT '{"high": 4, "medium": 8, "low": 24}',
+  project_manager JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')
+);
+
+-- สร้าง index สำหรับการค้นหา
+CREATE INDEX IF NOT EXISTS idx_projects_project_code ON projects(project_code);
+CREATE INDEX IF NOT EXISTS idx_projects_project_name ON projects(project_name);
+CREATE INDEX IF NOT EXISTS idx_projects_sign_date ON projects(sign_date);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects(created_at);
+
+-- สร้าง function สำหรับ update timestamp อัตโนมัติ
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW() AT TIME ZONE 'Asia/Bangkok';
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- สร้าง trigger สำหรับ update timestamp อัตโนมัติ
+CREATE TRIGGER update_projects_updated_at 
+    BEFORE UPDATE ON projects 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+
+
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -18,8 +105,8 @@ CREATE TABLE tickets (
   sla_deadline TIMESTAMPTZ NOT NULL,
   resolved_at TIMESTAMPTZ,
   closed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')
 );
 
 -- Create ticket_attachments table
@@ -30,7 +117,7 @@ CREATE TABLE ticket_attachments (
   url TEXT NOT NULL,
   size BIGINT NOT NULL,
   type VARCHAR(100) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')
 );
 
 -- Create ticket_comments table
@@ -41,8 +128,8 @@ CREATE TABLE ticket_comments (
   user_name VARCHAR(255) NOT NULL,
   content TEXT NOT NULL,
   is_internal BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok'),
+  updated_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')
 );
 
 -- Create ticket_change_logs table
@@ -55,7 +142,7 @@ CREATE TABLE ticket_change_logs (
   old_value TEXT,
   new_value TEXT,
   description TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')
 );
 
 -- Create ticket_feedback table
@@ -64,7 +151,7 @@ CREATE TABLE ticket_feedback (
   ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   comment TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT (NOW() AT TIME ZONE 'Asia/Bangkok')
 );
 
 -- Create indexes for better performance
@@ -83,7 +170,7 @@ CREATE INDEX idx_ticket_attachments_ticket_id ON ticket_attachments(ticket_id);
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    NEW.updated_at = NOW() AT TIME ZONE 'Asia/Bangkok';
     RETURN NEW;
 END;
 $$ language 'plpgsql';

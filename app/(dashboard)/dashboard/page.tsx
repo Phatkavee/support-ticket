@@ -11,6 +11,7 @@ import { TicketService } from '@/app/api/tickets/ticket-service'
 import type { Project } from '@/types/project'
 import type { DashboardStats, Ticket as TicketType } from '@/types/ticket'
 import { formatRemainingTime, getSlaStatusColor } from '@/lib/sla-utils'
+import { formatDateForUI } from '@/lib/date-utils'
 
 export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -77,7 +78,7 @@ export default function DashboardPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH')
+    return formatDateForUI(dateString, { includeTime: false })
   }
 
   // Get recent tickets (last 5)

@@ -15,6 +15,7 @@ import {
 } from '@/types/ticket';
 import { TicketService } from '@/app/api/tickets/ticket-service';
 import { formatRemainingTime, getSlaStatusColor } from '@/lib/sla-utils';
+import { formatDateForUI } from '@/lib/date-utils';
 
 const STATUS_COLORS: Record<TicketStatus, string> = {
   'Open': 'bg-blue-500',
@@ -109,13 +110,7 @@ export default function TicketsListPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDateForUI(dateString, { includeTime: true })
   };
 
   if (loading) {

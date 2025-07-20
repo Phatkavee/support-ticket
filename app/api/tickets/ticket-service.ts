@@ -12,6 +12,7 @@ import { Project } from '@/types/project';
 import { generateTicketNumber } from '@/lib/ticket-utils';
 import { calculateSlaDeadline } from '@/lib/sla-utils';
 import { supabase } from '@/lib/supabase';
+import { getCreatedAtTimestamp } from '@/lib/date-utils';
 import {
   mapTicketFromDb,
   mapTicketToDb,
@@ -163,7 +164,7 @@ export class TicketService {
       
       const existingNumbers = existingTickets?.map(t => t.ticket_number) || [];
       
-      const now = new Date().toISOString();
+      const now = getCreatedAtTimestamp();
       const createdDate = new Date(now);
       
       // Create base ticket data
@@ -258,7 +259,7 @@ export class TicketService {
 
       if (fetchError || !originalTicket) return null;
 
-      const now = new Date().toISOString();
+      const now = getCreatedAtTimestamp();
       
       // Update ticket in database
       const { data: updatedTicket, error: updateError } = await supabase
@@ -323,7 +324,7 @@ export class TicketService {
         action: 'assigned',
         newValue: supplierId,
         description: `Ticket assigned to supplier`,
-        createdAt: new Date().toISOString()
+        createdAt: getCreatedAtTimestamp()
       });
     }
     
@@ -338,9 +339,9 @@ export class TicketService {
     const updates: Partial<Ticket> = { status };
     
     if (status === 'Resolved') {
-      updates.resolvedAt = new Date().toISOString();
+      updates.resolvedAt = getCreatedAtTimestamp();
     } else if (status === 'Closed') {
-      updates.closedAt = new Date().toISOString();
+      updates.closedAt = getCreatedAtTimestamp();
     }
     
     const updated = await this.updateTicket(ticketId, updates);
@@ -383,7 +384,7 @@ export class TicketService {
         userName: comment.userName,
         action: 'comment_added',
         description: 'Comment added to ticket',
-        createdAt: new Date().toISOString()
+        createdAt: getCreatedAtTimestamp()
       });
 
       return mapCommentFromDb(newComment);

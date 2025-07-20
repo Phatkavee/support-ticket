@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/logger'
 import type { Project, ProjectFormData } from '@/types/project'
+import { getCreatedAtTimestamp } from '@/lib/date-utils'
 
 const supabase = createClient()
 
@@ -124,7 +125,7 @@ export const projectService = {
         suppliers: projectData.suppliers,
         sla_level: projectData.slaLevel,
         project_manager: projectData.projectManager,
-        updated_at: new Date().toISOString(),
+        updated_at: getCreatedAtTimestamp(),
       })
       .eq('id', id)
       .select()

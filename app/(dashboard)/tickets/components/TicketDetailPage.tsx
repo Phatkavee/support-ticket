@@ -15,6 +15,7 @@ import {
 } from '@/types/ticket';
 import { TicketService } from '@/app/api/tickets/ticket-service';
 import { formatRemainingTime, getSlaStatusColor } from '@/lib/sla-utils';
+import { formatDateForUI } from '@/lib/date-utils';
 
 const STATUS_OPTIONS: TicketStatus[] = ['Open', 'In Progress', 'Resolved', 'Closed'];
 
@@ -171,13 +172,7 @@ export default function TicketDetailPage() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDateForUI(dateString, { includeTime: true })
   };
 
   if (loading) {

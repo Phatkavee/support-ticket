@@ -276,12 +276,7 @@ export default function TicketsListPage() {
                         {ticket.subject}
                       </div>
                       {ticket.attachments && ticket.attachments.length > 0 && (
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                          {ticket.attachments.length}
-                        </div>
+                        <div className="flex items-center text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded"></div>
                       )}
                     </div>
                   </td>

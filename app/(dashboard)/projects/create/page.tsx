@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ProjectForm } from '../components/ProjectForm'
+import { ProjectForm } from '../components/CreateProjectForm'
 import { projectService } from '@/app/api/projects/project-service'
 import type { ProjectFormData } from '@/types/project'
 import { useState } from 'react'

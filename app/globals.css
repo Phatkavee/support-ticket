@@ -74,3 +74,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}

@@ -1,10 +1,11 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, Phone, Mail, User, Building } from 'lucide-react'
+import { Label } from '@/components/ui/label'
 import type { Project } from '@/types/project'
+import { formatDateForUI } from '@/lib/date-utils'
 
 interface ProjectDetailModalProps {
   project: Project | null
@@ -13,201 +14,165 @@ interface ProjectDetailModalProps {
 }
 
 export function ProjectDetailModal({ project, isOpen, onClose }: ProjectDetailModalProps) {
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   if (!project) return null
 
-  const formatDate = (dateString: string) => {
-    // ป้องกัน hydration mismatch โดยใช้ client-side rendering สำหรับ date
-    if (typeof window === 'undefined') {
-      // Server-side: return simple format
-      return new Date(dateString).toISOString().split('T')[0]
+  const getSlaColor = (hours: number) => {
+    if (hours <= 4) return 'bg-red-500 text-white'
+    if (hours <= 8) return 'bg-yellow-500 text-white'
+    return 'bg-green-500 text-white'
+  }
+
+  // Avoid hydration mismatch by only rendering dates on client
+  const formatDate = (dateString: string, includeTime = false) => {
+    if (!mounted) return '...'
+    try {
+      return formatDateForUI(dateString, { includeTime })
+    } catch {
+      return dateString
     }
-    // Client-side: return localized format
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {project.projectName}
-            <Badge variant="outline">{project.projectCode}</Badge>
+          <DialogTitle className="text-xl font-bold">
+            {project.projectCode} - {project.projectName}
           </DialogTitle>
           <DialogDescription>
-            รายละเอียดข้อมูลโครงการ
+            รายละเอียดโครงการ
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* ข้อมูลพื้นฐาน */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">ข้อมูลโครงการ</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">เลขที่สัญญา</div>
-                <div className="text-base">{project.projectCode}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">ชื่อโครงการ</div>
-                <div className="text-base">{project.projectName}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Phone className="w-4 h-4" />
-                  เบอร์ติดต่อ
-                </div>
-                <div className="text-base">{project.contactNumber}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  วันที่เซ็นสัญญา
-                </div>
-                <div className="text-base">{formatDate(project.signDate)}</div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* ข้อมูลโครงการ */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-500">รหัสโครงการ</Label>
+              <p className="text-gray-900">{project.projectCode}</p>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">ชื่อโครงการ</Label>
+              <p className="text-gray-900">{project.projectName}</p>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">เบอร์ติดต่อ</Label>
+              <p className="text-gray-900">{project.contactNumber}</p>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium text-gray-500">วันที่เซ็นสัญญา</Label>
+              <p className="text-gray-900">
+                {formatDate(project.signDate)}
+              </p>
+            </div>
+          </div>
 
           {/* ผู้จัดการโครงการ */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="w-5 h-5" />
-                ผู้จัดการโครงการหรือผู้รับผิดชอบ
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">ชื่อ</div>
-                <div className="text-base">{project.projectManager.name}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Mail className="w-4 h-4" />
-                  อีเมล
+          <div>
+            <Label className="text-sm font-medium text-gray-500 mb-2 block">ผู้จัดการโครงการ</Label>
+            <div className="p-4 bg-gray-50 rounded-md">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">ชื่อ</p>
+                  <p className="text-gray-900">{project.projectManager.name}</p>
                 </div>
-                <div className="text-base">{project.projectManager.email}</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Phone className="w-4 h-4" />
-                  เบอร์โทรศัพท์
+                <div>
+                  <p className="text-sm font-medium text-gray-700">อีเมล</p>
+                  <p className="text-gray-900">{project.projectManager.email}</p>
                 </div>
-                <div className="text-base">{project.projectManager.telephone}</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">โทรศัพท์</p>
+                  <p className="text-gray-900">{project.projectManager.telephone}</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* ผู้ให้บริการ */}
+          <div>
+            <Label className="text-sm font-medium text-gray-500 mb-2 block">ผู้ให้บริการ</Label>
+            <div className="space-y-3">
+              {project.suppliers.map((supplier, index) => (
+                <div key={supplier.id || index} className="p-4 bg-gray-50 rounded-md">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">ชื่อบริษัท</p>
+                      <p className="text-gray-900">{supplier.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">อีเมล</p>
+                      <p className="text-gray-900">{supplier.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">โทรศัพท์</p>
+                      <p className="text-gray-900">{supplier.telephone}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {project.suppliers.length === 0 && (
+                <p className="text-gray-500 py-4">ยังไม่มีข้อมูลผู้ให้บริการ</p>
+              )}
+            </div>
+          </div>
 
           {/* ระดับ SLA */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">ระดับ SLA (เวลาการแก้ไข)</CardTitle>
-              <CardDescription>
-                ระยะเวลาในการแก้ไขปัญหา (หน่วย: ชั่วโมง)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 border rounded-lg">
-                  <Badge variant="destructive" className="mb-2">
-                    High Priority
+          <div>
+            <Label className="text-sm font-medium text-gray-500 mb-2 block">ระดับ SLA</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-red-50 rounded-md border border-red-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-red-800">สูง (High)</span>
+                  <Badge className={getSlaColor(project.slaLevel.high)}>
+                    {project.slaLevel.high} ชั่วโมง
                   </Badge>
-                  <div className="text-2xl font-bold text-red-600">
-                    {project.slaLevel.high}
-                  </div>
-                  <div className="text-sm text-muted-foreground">ชั่วโมง</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <Badge variant="secondary" className="mb-2">
-                    Medium Priority
-                  </Badge>
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {project.slaLevel.medium}
-                  </div>
-                  <div className="text-sm text-muted-foreground">ชั่วโมง</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <Badge variant="outline" className="mb-2">
-                    Low Priority
-                  </Badge>
-                  <div className="text-2xl font-bold text-green-600">
-                    {project.slaLevel.low}
-                  </div>
-                  <div className="text-sm text-muted-foreground">ชั่วโมง</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* บริษัทผู้ดูแลโครงการ */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building className="w-5 h-5" />
-                บริษัทผู้ดูแลโครงการ ({project.suppliers.length} ราย)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.suppliers.map((supplier, index) => (
-                  <div key={index} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary">Supplier {index + 1}</Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="text-sm font-medium text-muted-foreground">ชื่อบริษัท</div>
-                        <div className="text-base">{supplier.name}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                          <Mail className="w-4 h-4" />
-                          อีเมล
-                        </div>
-                        <div className="text-base">{supplier.email}</div>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                          <Phone className="w-4 h-4" />
-                          เบอร์โทรศัพท์
-                        </div>
-                        <div className="text-base">{supplier.telephone}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-3 bg-yellow-50 rounded-md border border-yellow-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-yellow-800">กลาง (Medium)</span>
+                  <Badge className={getSlaColor(project.slaLevel.medium)}>
+                    {project.slaLevel.medium} ชั่วโมง
+                  </Badge>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="p-3 bg-green-50 rounded-md border border-green-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-800">ต่ำ (Low)</span>
+                  <Badge className={getSlaColor(project.slaLevel.low)}>
+                    {project.slaLevel.low} ชั่วโมง
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* ข้อมูลระบบ */}
-          {(project.createdAt || project.updatedAt) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">ข้อมูลระบบ</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4">
-                {project.createdAt && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">วันที่สร้าง</div>
-                    <div className="text-base">{formatDate(project.createdAt)}</div>
-                  </div>
-                )}
-                {project.updatedAt && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">วันที่แก้ไขล่าสุด</div>
-                    <div className="text-base">{formatDate(project.updatedAt)}</div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* วันที่สร้างและอัปเดต */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+            <div>
+              <Label className="text-sm font-medium text-gray-500">วันที่สร้าง</Label>
+              <p className="text-gray-900">
+                {project.createdAt && formatDate(project.createdAt, true)}
+              </p>
+            </div>
+            {project.updatedAt && (
+              <div>
+                <Label className="text-sm font-medium text-gray-500">วันที่อัปเดตล่าสุด</Label>
+                <p className="text-gray-900">
+                  {formatDate(project.updatedAt, true)}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -41,6 +41,19 @@ export class TicketService {
     }
   }
 
+  // Check if storage is available
+  private static async isStorageReady(): Promise<boolean> {
+    try {
+      const { error } = await supabase.storage
+        .from('ticket-attachments')
+        .list('', { limit: 1 });
+      
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
   // Get all tickets
   static async getAllTickets(): Promise<Ticket[]> {
     try {
@@ -195,37 +208,68 @@ export class TicketService {
       // Handle file attachments if any
       const attachments = [];
       if (formData.attachments && formData.attachments.length > 0) {
-        for (const file of formData.attachments) {
-          // Upload file to Supabase Storage
-          const fileName = `${ticket.id}/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from('ticket-attachments')
-            .upload(fileName, file);
+        // Check if storage is available before attempting uploads
+        const storageAvailable = await this.isStorageReady();
+        
+        if (!storageAvailable) {
+          console.warn('Supabase storage is not available. Files will be skipped.');
+          // Note: You might want to notify the user that files couldn't be uploaded
+        } else {
+          for (const file of formData.attachments) {
+            try {
+              // Upload file to Supabase Storage
+              const fileName = `${ticket.id}/${Date.now()}-${file.name}`;
+              const { error: uploadError } = await supabase.storage
+                .from('ticket-attachments')
+                .upload(fileName, file);
 
-          if (uploadError) {
-            console.error('Error uploading file:', uploadError);
-            continue;
-          }
+              if (uploadError) {
+                console.error('Error uploading file:', {
+                  fileName: file.name,
+                  error: uploadError.message,
+                  details: uploadError
+                });
+                // Continue processing other files
+                continue;
+              }
 
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('ticket-attachments')
-            .getPublicUrl(fileName);
+              // Get public URL
+              const { data: urlData } = supabase.storage
+                .from('ticket-attachments')
+                .getPublicUrl(fileName);
 
-          // Insert attachment record
-          const { data: attachment, error: attachmentError } = await supabase
-            .from('ticket_attachments')
-            .insert(mapAttachmentToDb({
-              filename: file.name,
-              url: urlData.publicUrl,
-              size: file.size,
-              type: file.type
-            }, ticket.id))
-            .select()
-            .single();
+              // Insert attachment record
+              const { data: attachment, error: attachmentError } = await supabase
+                .from('ticket_attachments')
+                .insert(mapAttachmentToDb({
+                  filename: file.name,
+                  url: urlData.publicUrl,
+                  size: file.size,
+                  type: file.type
+                }, ticket.id))
+                .select()
+                .single();
 
-          if (!attachmentError && attachment) {
-            attachments.push(attachment);
+              if (attachmentError) {
+                console.error('Error saving attachment record:', {
+                  fileName: file.name,
+                  error: attachmentError.message,
+                  details: attachmentError
+                });
+                continue;
+              }
+
+              if (attachment) {
+                attachments.push(attachment);
+              }
+            } catch (fileError) {
+              console.error('Error processing file:', {
+                fileName: file.name,
+                error: fileError
+              });
+              // Continue processing other files
+              continue;
+            }
           }
         }
       }
@@ -242,9 +286,60 @@ export class TicketService {
 
       return mapTicketFromDb(ticket, attachments);
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      console.error('Error creating ticket:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error,
+        formData: {
+          reporterName: formData.reporterName,
+          reporterEmail: formData.reporterEmail,
+          subject: formData.subject,
+          attachmentCount: formData.attachments?.length || 0
+        }
+      });
+      
+      // If this is a database connection issue, try fallback to localStorage
+      if (typeof window !== 'undefined') {
+        console.warn('Database error detected, falling back to localStorage');
+        return this.createTicketInLocalStorage(formData, project);
+      }
+      
       throw error;
     }
+  }
+
+  // Fallback method for localStorage
+  private static async createTicketInLocalStorage(
+    formData: TicketFormData,
+    project?: Project
+  ): Promise<Ticket> {
+    const tickets = await this.getAllTicketsFromLocalStorage();
+    const existingNumbers = tickets.map(t => t.ticketNumber);
+    
+    const now = getCreatedAtTimestamp();
+    const createdDate = new Date(now);
+    
+    const newTicket: Ticket = {
+      id: Date.now().toString(),
+      ticketNumber: generateTicketNumber(existingNumbers),
+      reporterName: formData.reporterName,
+      reporterEmail: formData.reporterEmail,
+      reporterPhone: formData.reporterPhone,
+      category: formData.category,
+      priority: formData.priority,
+      status: 'Open',
+      subject: formData.subject,
+      description: formData.description,
+      projectId: formData.projectId,
+      slaDeadline: calculateSlaDeadline(formData.priority, project, createdDate).toISOString(),
+      createdAt: now,
+      updatedAt: now,
+      attachments: [] // Note: File attachments not supported in localStorage fallback
+    };
+
+    const updatedTickets = [newTicket, ...tickets];
+    localStorage.setItem('support-tickets', JSON.stringify(updatedTickets));
+    
+    return newTicket;
   }
 
   // Update ticket

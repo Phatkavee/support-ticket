@@ -72,27 +72,39 @@ export function isToday(date: Date | string): boolean {
 }
 
 // Format date for UI display (Thai locale with Bangkok timezone)
+// Safe for SSR/Hydration by using predictable formatting
 export function formatDateForUI(dateString: string | Date, options?: {
   includeTime?: boolean;
   locale?: string;
 }): string {
   if (!dateString) return '';
   
-  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  const { includeTime = false, locale = 'th-TH' } = options || {};
-  
-  const formatOptions: Intl.DateTimeFormatOptions = {
-    timeZone: 'Asia/Bangkok',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  };
-  
-  if (includeTime) {
-    formatOptions.hour = '2-digit';
-    formatOptions.minute = '2-digit';
-    formatOptions.hour12 = false;
+  try {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return typeof dateString === 'string' ? dateString : '';
+    }
+    
+    const { includeTime = false } = options || {};
+    
+    // Use predictable formatting to avoid hydration mismatches
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    let result = `${day}/${month}/${year}`;
+    
+    if (includeTime) {
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      result += ` ${hours}:${minutes}`;
+    }
+    
+    return result;
+  } catch {
+    // Fallback to original string if parsing fails
+    return typeof dateString === 'string' ? dateString : '';
   }
-  
-  return new Intl.DateTimeFormat(locale, formatOptions).format(date);
 }

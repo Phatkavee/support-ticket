@@ -47,11 +47,17 @@ function Button({
   }) {
   const Comp = asChild ? Slot : "button"
 
+  // Remove any browser extension attributes that might cause hydration issues
+  const cleanProps = { ...props }
+  if ('fdprocessedid' in cleanProps) {
+    delete (cleanProps as Record<string, unknown>).fdprocessedid
+  }
+
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
+      className={cn(buttonVariants({ variant, size }), className)}
+      {...cleanProps}
     />
   )
 }

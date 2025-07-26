@@ -101,6 +101,7 @@ export function ProjectForm({
                     onChange={(e) => setFormData(prev => ({ ...prev, projectCode: e.target.value }))}
                     required
                     placeholder="เช่น PRJ-2024-001"
+                    suppressHydrationWarning
                   />
                 </div>
                 <div className="space-y-2">

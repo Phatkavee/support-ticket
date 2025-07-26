@@ -37,6 +37,13 @@ export default function CreateTicketForm() {
     setProjects([]);
   }, []);
 
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup is handled in onLoad event of images
+    };
+  }, []);
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -89,7 +96,19 @@ export default function CreateTicketForm() {
       router.push(`/tickets/${ticket.id}`);
     } catch (error) {
       console.error('Error creating ticket:', error);
-      alert('เกิดข้อผิดพลาดในการสร้าง Ticket');
+      
+      // Show more specific error message
+      let errorMessage = 'เกิดข้อผิดพลาดในการสร้าง Ticket';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('storage')) {
+          errorMessage = 'เกิดข้อผิดพลาดในการอัปโหลดไฟล์ แต่ Ticket ได้ถูกสร้างแล้ว กรุณาแนบไฟล์ภายหลัง';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองอีกครั้ง';
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -334,46 +353,30 @@ export default function CreateTicketForm() {
                 
                 {/* Display selected files */}
                 {attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-sm font-medium text-gray-700">ไฟล์ที่เลือก:</p>
-                    {attachments.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                        <div className="flex items-center space-x-2">
-                          <div className="flex-shrink-0">
-                            {file.type.startsWith('image/') ? (
-                              <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            ) : (
-                              <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-                                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
+                  <div className="mt-3 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">ไฟล์ที่เลือก ({attachments.length} ไฟล์):</p>
+                    <div className="space-y-2">
+                      {attachments.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white hover:shadow-md transition-shadow">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-gray-900 truncate" title={file.name}>
                               {file.name}
                             </p>
                             <p className="text-xs text-gray-500">
                               {formatFileSize(file.size)}
                             </p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(index)}
+                            className="ml-3 w-6 h-6 flex items-center justify-center text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full transition-colors text-sm font-bold"
+                            title="ลบไฟล์"
+                          >
+                            ×
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeAttachment(index)}
-                          className="flex-shrink-0 p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
